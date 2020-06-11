@@ -21,32 +21,7 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.truncate;
 import static io.vavr.API.$;
 import static io.vavr.API.Case;
 import static io.vavr.API.Match;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.ATOMIC_BATCH_MUTATE;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.BATCH_STATEMENT_SIZE;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.CLUSTER_NAME;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.ONLY_USE_LOCAL_CONSISTENCY_FOR_SYSTEM_OPERATIONS;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.KEYSPACE;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.LOCAL_CORE_CONNECTIONS_PER_HOST;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.LOCAL_DATACENTER;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.LOCAL_MAX_CONNECTIONS_PER_HOST;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.LOCAL_MAX_REQUESTS_PER_CONNECTION;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.PROTOCOL_VERSION;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.READ_CONSISTENCY;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.REMOTE_CORE_CONNECTIONS_PER_HOST;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.REMOTE_MAX_CONNECTIONS_PER_HOST;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.REMOTE_MAX_REQUESTS_PER_CONNECTION;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.REPLICATION_FACTOR;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.REPLICATION_OPTIONS;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.REPLICATION_STRATEGY;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.SSL_ENABLED;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.SSL_TRUSTSTORE_LOCATION;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.SSL_TRUSTSTORE_PASSWORD;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.SSL_CLIENT_AUTHENTICATION_ENABLED;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.SSL_KEYSTORE_LOCATION;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.SSL_KEYSTORE_KEY_PASSWORD;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.SSL_KEYSTORE_STORE_PASSWORD;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.WRITE_CONSISTENCY;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.USE_EXTERNAL_LOCKING;
+import static org.janusgraph.diskstorage.cql.CQLConfigOptions.*;
 import static org.janusgraph.diskstorage.cql.CQLKeyColumnValueStore.EXCEPTION_MAPPER;
 import static org.janusgraph.diskstorage.cql.CQLTransaction.getTransaction;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.AUTH_PASSWORD;
@@ -84,6 +59,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
+import com.datastax.driver.core.*;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
 import org.janusgraph.diskstorage.PermanentBackendException;
@@ -101,19 +77,8 @@ import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
 import org.janusgraph.hadoop.CqlHadoopStoreManager;
 import org.janusgraph.util.system.NetworkUtil;
 
-import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.BatchStatement.Type;
-import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Cluster.Builder;
-import com.datastax.driver.core.HostDistance;
-import com.datastax.driver.core.JdkSSLOptions;
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.PoolingOptions;
-import com.datastax.driver.core.ProtocolVersion;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.Statement;
-import com.datastax.driver.core.TableMetadata;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.core.exceptions.QueryExecutionException;
 import com.datastax.driver.core.exceptions.QueryValidationException;
@@ -316,7 +281,35 @@ public class CQLStoreManager extends DistributedStoreManager implements KeyColum
                     HostDistance.REMOTE,
                     configuration.get(REMOTE_CORE_CONNECTIONS_PER_HOST),
                     configuration.get(REMOTE_MAX_CONNECTIONS_PER_HOST));
-        return builder.withPoolingOptions(poolingOptions).build();
+
+        Cluster cluster = builder.withPoolingOptions(poolingOptions).build();
+
+        if(configuration.get(QUERY_LOGGER_ENABLED)){
+            registerQueryLogger(cluster, configuration);
+        }
+
+        return cluster;
+    }
+
+    private void registerQueryLogger(Cluster cluster, Configuration configuration){
+        QueryLogger.Builder queryLoggerBuilder = QueryLogger.builder();
+        int maxQueryStringLength = configuration.get(QUERY_LOGGER_MAX_QUERY_STRING_LENGTH);
+        if(maxQueryStringLength != -1){
+            queryLoggerBuilder.withMaxQueryStringLength(maxQueryStringLength);
+        }
+        long constantThreshold = configuration.get(QUERY_LOGGER_CONSTANT_THRESHOLD);
+        if(constantThreshold != -1){
+            queryLoggerBuilder.withConstantThreshold(constantThreshold);
+        }
+        int maxLoggedParameters = configuration.get(QUERY_LOGGER_MAX_LOGGED_PARAMETERS);
+        if(maxLoggedParameters != -1){
+            queryLoggerBuilder.withMaxLoggedParameters(maxLoggedParameters);
+        }
+        int maxParameterValueLength = configuration.get(QUERY_LOGGER_MAX_PARAMETER_VALUE_LENGTH);
+        if(maxParameterValueLength != -1){
+            queryLoggerBuilder.withMaxParameterValueLength(maxParameterValueLength);
+        }
+        cluster.register(queryLoggerBuilder.build());
     }
 
     Session initializeSession(final String keyspaceName) {

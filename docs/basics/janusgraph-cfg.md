@@ -407,6 +407,18 @@ CQL storage backend options
 | storage.cql.use-external-locking | True to prevent JanusGraph from using its own locking mechanism. Setting this to true eliminates redundant checks when using an external locking mechanism outside of JanusGraph. Be aware that when use-external-locking is set to true, that failure to employ a locking algorithm which locks all columns that participate in a transaction upfront and unlocks them when the transaction ends, will result in a 'read uncommitted' transaction isolation level guarantee. If set to true without an appropriate external locking mechanism in place side effects such as dirty/non-repeatable/phantom reads should be expected. | Boolean | false | MASKABLE |
 | storage.cql.write-consistency-level | The consistency level of write operations against Cassandra | String | QUORUM | MASKABLE |
 
+### storage.cql.query-logger
+CQL query logger options
+
+
+| Name | Description | Datatype | Default Value | Mutability |
+| ---- | ---- | ---- | ---- | ---- |
+| storage.cql.query-logger.constant-threshold | Log only queries which take longer to complete than a configured threshold in milliseconds. Use '-1' to use datastax default value. | Long | -1 | LOCAL |
+| storage.cql.query-logger.enabled | Registers a query logger with datastax cassandra driver | Boolean | false | LOCAL |
+| storage.cql.query-logger.max-logged-parameters | Maximum amount of logged parameters. Queries with a number of parameters higher than this value will not have all their parameters logged. Use '-1' to use datastax default value. | Integer | -1 | LOCAL |
+| storage.cql.query-logger.max-parameter-value-length | Parameter values longer than this value will be truncated when logged. Use '-1' to use datastax default value. | Integer | -1 | LOCAL |
+| storage.cql.query-logger.max-query-string-length | Max query string length to be logged when query logger is enabled. Use '-1' to use datastax default value. | Integer | -1 | LOCAL |
+
 ### storage.cql.ssl
 Configuration options for SSL
 
