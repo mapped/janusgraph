@@ -285,4 +285,44 @@ public interface CQLConfigOptions {
             ConfigOption.Type.MASKABLE,
             String.class);
 
+    // Query logger
+    ConfigNamespace QUERY_LOGGER = new ConfigNamespace(
+        CQL_NS,
+        "query-logger",
+        "CQL query logger options");
+
+    ConfigOption<Boolean> QUERY_LOGGER_ENABLED = new ConfigOption<>(
+        QUERY_LOGGER,
+        "enabled",
+        "Registers a query logger with datastax cassandra driver",
+        ConfigOption.Type.LOCAL,
+        false);
+
+    ConfigOption<Integer> QUERY_LOGGER_MAX_QUERY_STRING_LENGTH = new ConfigOption<>(
+        QUERY_LOGGER,
+        "max-query-string-length",
+        "Max query string length to be logged when query logger is enabled. Use '-1' to use datastax default value.",
+        ConfigOption.Type.LOCAL,
+        -1);
+
+    ConfigOption<Long> QUERY_LOGGER_CONSTANT_THRESHOLD = new ConfigOption<>(
+        QUERY_LOGGER,
+        "constant-threshold",
+        "Log only queries which take longer to complete than a configured threshold in milliseconds. Use '-1' to use datastax default value.",
+        ConfigOption.Type.LOCAL,
+        -1L);
+
+    ConfigOption<Integer> QUERY_LOGGER_MAX_LOGGED_PARAMETERS = new ConfigOption<>(
+        QUERY_LOGGER,
+        "max-logged-parameters",
+        "Maximum amount of logged parameters. Queries with a number of parameters higher than this value will not have all their parameters logged. Use '-1' to use datastax default value.",
+        ConfigOption.Type.LOCAL,
+        -1);
+
+    ConfigOption<Integer> QUERY_LOGGER_MAX_PARAMETER_VALUE_LENGTH = new ConfigOption<>(
+        QUERY_LOGGER,
+        "max-parameter-value-length",
+        "Parameter values longer than this value will be truncated when logged. Use '-1' to use datastax default value.",
+        ConfigOption.Type.LOCAL,
+        -1);
 }
